@@ -1,15 +1,9 @@
 import sys
 import pygame
 
-FPS = 60
-
-CUBE_SIZE = 90
-PLAY_AREA_SIZE = CUBE_SIZE * 5
-
-BACKGROUND_COLOR = (240, 240, 240)
-BOARD_COLOR = (49, 32, 42)
-PLAY_AREA_COLOR = (255, 255, 255)
-CUBE_COLOR = (132, 122, 97)
+from constants import BACKGROUND_COLOR, BOARD_COLOR, PLAY_AREA_SIZE, PLAY_AREA_COLOR, SCREEN_WIDTH, SCREEN_HEIGHT, \
+    BOARD_RADIUS, CUBE_SIZE, FPS
+from cube import Cube
 
 
 def main():
@@ -17,31 +11,52 @@ def main():
 
     main_clock = pygame.time.Clock()
 
-    window_surface = pygame.display.set_mode((1024, 768))
+    window_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.DOUBLEBUF | pygame.HWSURFACE)
     pygame.display.set_caption('Quixo')
-    window_surface.fill(BACKGROUND_COLOR)
 
-    pygame.draw.circle(window_surface, BOARD_COLOR, (512, 384), 360)
+    # Background
+    background = pygame.Surface(window_surface.get_size())
+    background.fill(BACKGROUND_COLOR)
+    pygame.draw.circle(background, BOARD_COLOR, (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2), BOARD_RADIUS)
 
-    play_area_left = 512 - PLAY_AREA_SIZE / 2
-    play_area_top = 384 - PLAY_AREA_SIZE / 2
+    play_area_left = (SCREEN_WIDTH - PLAY_AREA_SIZE) / 2
+    play_area_top = (SCREEN_HEIGHT - PLAY_AREA_SIZE) / 2
 
     play_area = pygame.Rect(play_area_left, play_area_top, PLAY_AREA_SIZE, PLAY_AREA_SIZE)
-    pygame.draw.rect(window_surface, PLAY_AREA_COLOR, play_area, 0, 5)
+    pygame.draw.rect(background, PLAY_AREA_COLOR, play_area, 0, 10)
 
+    # Cubes
+    all_cubes: pygame.sprite.Group[Cube] = pygame.sprite.Group()
     for r in range(5):
         for c in range(5):
-            cube_rect = pygame.Rect(play_area_left + CUBE_SIZE * r + 1, play_area_top + CUBE_SIZE * c + 1,
-                                    CUBE_SIZE - 2, CUBE_SIZE - 2)
-            pygame.draw.rect(window_surface, CUBE_COLOR, cube_rect, 0, 10)
+            cube = Cube(play_area_left + CUBE_SIZE * r, play_area_top + CUBE_SIZE * c)
+            all_cubes.add(cube)
+    select_cube = None
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if select_cube is not None:
+                    select_cube.unselect()
+                for cube in all_cubes.sprites():
+                    if cube.rect.collidepoint(event.pos):
+                        if cube == select_cube:
+                            select_cube = None
+                        else:
+                            cube.select()
+                            select_cube = cube
+                        break
 
-        pygame.display.update()
+        all_cubes.update()
+
+        window_surface.blit(background, (0, 0))
+        for cube in all_cubes.sprites():
+            window_surface.blit(cube.image, cube.rect)
+
+        pygame.display.flip()
 
         main_clock.tick(FPS)
 
