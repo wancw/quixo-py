@@ -29,9 +29,12 @@ def main():
     all_cubes: pygame.sprite.Group[Cube] = pygame.sprite.Group()
     for r in range(5):
         for c in range(5):
-            cube = Cube(play_area_left + CUBE_SIZE * r, play_area_top + CUBE_SIZE * c)
+            cube = Cube(play_area_left + CUBE_SIZE * r, play_area_top + CUBE_SIZE * c,
+                        r == 0 or r == 4 or c == 0 or c == 4)
             all_cubes.add(cube)
-    select_cube = None
+
+    selected_cube = None
+    hovered_cube = None
 
     while True:
         for event in pygame.event.get():
@@ -39,16 +42,26 @@ def main():
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if select_cube is not None:
-                    select_cube.unselect()
+                cube_to_select = None
                 for cube in all_cubes.sprites():
                     if cube.rect.collidepoint(event.pos):
-                        if cube == select_cube:
-                            select_cube = None
-                        else:
-                            cube.select()
-                            select_cube = cube
+                        cube_to_select = cube
                         break
+
+                if selected_cube is not None:
+                    selected_cube.unselect()
+                if cube_to_select is not None:
+                    if cube_to_select.select():
+                        selected_cube = cube_to_select
+
+        if hovered_cube is not None:
+            hovered_cube.mouseout()
+        hovered_cube = None
+        for cube in all_cubes.sprites():
+            if cube.rect.collidepoint(pygame.mouse.get_pos()):
+                cube.mouseover()
+                hovered_cube = cube
+                break
 
         all_cubes.update()
 
